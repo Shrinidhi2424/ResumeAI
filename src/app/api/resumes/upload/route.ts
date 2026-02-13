@@ -149,10 +149,12 @@ export async function POST(req: NextRequest) {
             { status: 201 }
         );
     } catch (error) {
-        console.error("Resume upload error:", error);
+        console.error("Resume upload error (Stack):", error);
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
         return NextResponse.json(
-            { error: "Internal server error during upload." },
+            { error: `Internal server error: ${errorMessage}` },
             { status: 500 }
         );
     }
 }
+

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import {
     DndContext,
     DragOverlay,
@@ -8,10 +9,13 @@ import {
     PointerSensor,
     useSensor,
     useSensors,
+    useDraggable, // Added
     type DragStartEvent,
     type DragEndEvent,
 } from "@dnd-kit/core";
 import { useDroppable } from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities"; // Added
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +26,7 @@ import {
     GripVertical,
     Trash2,
     Loader2,
+    ArrowLeft,
 } from "lucide-react";
 
 // ── Types ────────────────────────────────────────────────────
@@ -158,49 +163,65 @@ function ApplicationCard({
     onDelete: (id: string) => void;
     isDragOverlay?: boolean;
 }) {
+    const { attributes, listeners, setNodeRef, transform, isDragging } =
+        useDraggable({
+            id: app.id,
+            disabled: isDragOverlay,
+        });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        opacity: isDragging ? 0.3 : 1,
+    };
+
     return (
-        <Card
-            className={`
-        border-slate-200 bg-white shadow-sm cursor-grab active:cursor-grabbing
-        hover:shadow-md transition-all group
-        ${isDragOverlay ? "shadow-xl rotate-2 scale-105" : ""}
-      `}
-            data-drag-id={app.id}
-        >
-            <CardContent className="p-3">
-                <div className="flex items-start gap-2">
-                    <GripVertical className="h-4 w-4 text-slate-300 mt-0.5 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 mb-1">
-                            <Building2 className="h-3 w-3 text-slate-400 shrink-0" />
-                            <span className="text-xs font-semibold text-slate-800 truncate">
-                                {app.companyName}
-                            </span>
+        <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+            <Card
+                className={`
+            border-slate-200 bg-white shadow-sm cursor-grab active:cursor-grabbing
+            hover:shadow-md transition-all group
+            ${isDragOverlay ? "shadow-xl rotate-2 scale-105 cursor-grabbing" : ""}
+          `}
+                data-drag-id={app.id}
+            >
+                <CardContent className="p-3">
+                    <div className="flex items-start gap-2">
+                        <GripVertical className="h-4 w-4 text-slate-300 mt-0.5 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5 mb-1">
+                                <Building2 className="h-3 w-3 text-slate-400 shrink-0" />
+                                <span className="text-xs font-semibold text-slate-800 truncate">
+                                    {app.companyName}
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <Briefcase className="h-3 w-3 text-slate-400 shrink-0" />
+                                <span className="text-[11px] text-slate-500 truncate">
+                                    {app.jobTitle}
+                                </span>
+                            </div>
+                            {app.appliedDate && (
+                                <p className="text-[10px] text-slate-400 mt-1.5">
+                                    Applied: {new Date(app.appliedDate).toLocaleDateString()}
+                                </p>
+                            )}
                         </div>
-                        <div className="flex items-center gap-1.5">
-                            <Briefcase className="h-3 w-3 text-slate-400 shrink-0" />
-                            <span className="text-[11px] text-slate-500 truncate">
-                                {app.jobTitle}
-                            </span>
-                        </div>
-                        {app.appliedDate && (
-                            <p className="text-[10px] text-slate-400 mt-1.5">
-                                Applied: {new Date(app.appliedDate).toLocaleDateString()}
-                            </p>
-                        )}
+                        <button
+                            onClick={(e) => {
+                                // Important: stop propagation so drag isn't triggered
+                                // requires pointer-events-auto on button if parent suppresses
+                                e.stopPropagation();
+                                onDelete(app.id);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-all p-1"
+                            onPointerDown={(e) => e.stopPropagation()} // Prevent drag start
+                        >
+                            <Trash2 className="h-3.5 w-3.5" />
+                        </button>
                     </div>
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onDelete(app.id);
-                        }}
-                        className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-all p-1"
-                    >
-                        <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                </div>
-            </CardContent>
-        </Card>
+                </CardContent>
+            </Card>
+        </div>
     );
 }
 

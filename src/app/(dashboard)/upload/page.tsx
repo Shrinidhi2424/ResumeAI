@@ -1,5 +1,7 @@
 import { UploadForm } from "@/components/forms/upload-form";
-import { FileSearch } from "lucide-react";
+import { ArrowLeft, FileSearch } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export const metadata = {
     title: "Upload Resume | ResumeAI Pro",

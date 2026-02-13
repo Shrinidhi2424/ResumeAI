@@ -98,8 +98,10 @@ export const coverLetterSchema = z
     .object({
         resumeId: uuid,
         companyName: safeString(255),
-        jobDescription: safeString(10_000),
+        jobDescription: safeString(15_000), // Increased limit for detailed JDs
+        companyNews: optionalString(5000),
         tone: z.enum(["professional", "enthusiastic", "technical"]),
+        prompt: z.string().optional(), // Injected by useCompletion
     })
     .strict();
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +16,7 @@ import {
     PenLine,
     CheckCircle2,
     GripVertical,
+    ArrowLeft,
 } from "lucide-react";
 
 // ── Types ────────────────────────────────────────────────────
@@ -84,6 +86,219 @@ const INITIAL_STATE: ResumeState = {
     projects: [],
     certifications: [],
 };
+
+// ── Components ───────────────────────────────────────────────
+
+function Input({
+    label,
+    value,
+    onChange,
+    placeholder,
+    type = "text",
+}: {
+    label: string;
+    value: string;
+    onChange: (v: string) => void;
+    placeholder?: string;
+    type?: string;
+}) {
+    return (
+        <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">
+                {label}
+            </label>
+            <input
+                type={type}
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                placeholder={placeholder}
+                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white"
+            />
+        </div>
+    );
+}
+
+interface SectionEditorProps {
+    type: "experience" | "education" | "projects";
+    items: ResumeSection[];
+    isEducation?: boolean;
+    onUpdate: (type: "experience" | "education" | "projects", id: string, field: string, value: string) => void;
+    onRemove: (type: "experience" | "education" | "projects", id: string) => void;
+    onAddBullet: (type: "experience" | "education" | "projects", sectionId: string) => void;
+    onUpdateBullet: (type: "experience" | "education" | "projects", sectionId: string, bulletIndex: number, value: string) => void;
+    onRemoveBullet: (type: "experience" | "education" | "projects", sectionId: string, bulletIndex: number) => void;
+    onAddSection: (type: "experience" | "education" | "projects") => void;
+}
+
+function SectionEditor({
+    type,
+    items,
+    isEducation,
+    onUpdate,
+    onRemove,
+    onAddBullet,
+    onUpdateBullet,
+    onRemoveBullet,
+    onAddSection,
+}: SectionEditorProps) {
+    return (
+        <div className="space-y-4">
+            {items.map((item, idx) => (
+                <div
+                    key={item.id}
+                    className="p-4 border border-slate-200 rounded-lg bg-slate-50/50 space-y-3"
+                >
+                    <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-slate-400 flex items-center gap-1">
+                            <GripVertical className="h-3 w-3" /> #{idx + 1}
+                        </span>
+                        {items.length > 1 && (
+                            <button
+                                onClick={() => onRemove(type, item.id)}
+                                className="text-red-400 hover:text-red-600 p-1"
+                            >
+                                <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                        )}
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                        {isEducation ? (
+                            <>
+                                <Input
+                                    label="Degree"
+                                    value={item.degree || ""}
+                                    onChange={(v) => onUpdate(type, item.id, "degree", v)}
+                                    placeholder="B.Tech Computer Science"
+                                />
+                                <Input
+                                    label="Institution"
+                                    value={item.institution || ""}
+                                    onChange={(v) =>
+                                        onUpdate(type, item.id, "institution", v)
+                                    }
+                                    placeholder="MIT"
+                                />
+                                <Input
+                                    label="GPA"
+                                    value={item.gpa || ""}
+                                    onChange={(v) => onUpdate(type, item.id, "gpa", v)}
+                                    placeholder="3.8/4.0"
+                                />
+                            </>
+                        ) : (
+                            <>
+                                <Input
+                                    label={type === "projects" ? "Project Name" : "Job Title"}
+                                    value={item.title}
+                                    onChange={(v) => onUpdate(type, item.id, "title", v)}
+                                    placeholder={
+                                        type === "projects"
+                                            ? "E-Commerce Platform"
+                                            : "Software Engineer"
+                                    }
+                                />
+                                {type === "experience" && (
+                                    <Input
+                                        label="Company"
+                                        value={item.company || ""}
+                                        onChange={(v) =>
+                                            onUpdate(type, item.id, "company", v)
+                                        }
+                                        placeholder="Google"
+                                    />
+                                )}
+                            </>
+                        )}
+
+                        <Input
+                            label="Location"
+                            value={item.location || ""}
+                            onChange={(v) => onUpdate(type, item.id, "location", v)}
+                            placeholder="San Francisco, CA"
+                        />
+                        <Input
+                            label="Start Date"
+                            value={item.startDate || ""}
+                            onChange={(v) =>
+                                onUpdate(type, item.id, "startDate", v)
+                            }
+                            placeholder="Jan 2023"
+                        />
+                        <Input
+                            label="End Date"
+                            value={item.endDate || ""}
+                            onChange={(v) =>
+                                onUpdate(type, item.id, "endDate", v)
+                            }
+                            placeholder="Present"
+                        />
+                    </div>
+
+                    {/* Bullet Points */}
+                    <div>
+                        <label className="block text-xs font-medium text-slate-500 mb-1">
+                            Bullet Points
+                        </label>
+                        {item.bullets.map((b, bi) => (
+                            <div key={bi} className="flex gap-1 mb-1.5">
+                                <span className="text-slate-300 mt-2 text-xs">•</span>
+                                <input
+                                    value={b}
+                                    onChange={(e) =>
+                                        onUpdateBullet(type, item.id, bi, e.target.value)
+                                    }
+                                    placeholder="Describe your achievement with metrics..."
+                                    className="flex-1 px-3 py-1.5 text-sm border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                                />
+                                {item.bullets.length > 1 && (
+                                    <button
+                                        onClick={() => onRemoveBullet(type, item.id, bi)}
+                                        className="text-red-300 hover:text-red-500 px-1"
+                                    >
+                                        <Trash2 className="h-3 w-3" />
+                                    </button>
+                                )}
+                            </div>
+                        ))}
+                        <button
+                            onClick={() => onAddBullet(type, item.id)}
+                            className="text-xs text-indigo-500 hover:text-indigo-700 mt-1 flex items-center gap-1"
+                        >
+                            <Plus className="h-3 w-3" /> Add bullet
+                        </button>
+                    </div>
+                </div>
+            ))}
+
+            <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onAddSection(type)}
+                className="w-full border-dashed"
+            >
+                <Plus className="h-3.5 w-3.5 mr-1" /> Add{" "}
+                {type === "experience"
+                    ? "Experience"
+                    : type === "education"
+                        ? "Education"
+                        : "Project"}
+            </Button>
+        </div>
+    );
+}
+
+// ── Tab Config ─────────────────────────────────────────────
+
+const tabs = [
+    { id: "personal" as const, label: "Personal" },
+    { id: "summary" as const, label: "Summary" },
+    { id: "experience" as const, label: "Experience" },
+    { id: "education" as const, label: "Education" },
+    { id: "skills" as const, label: "Skills" },
+    { id: "projects" as const, label: "Projects" },
+    { id: "certs" as const, label: "Certs" },
+];
 
 // ── Page Component ───────────────────────────────────────────
 
@@ -286,206 +501,7 @@ export default function BuilderPage() {
         }, 300);
     }
 
-    // ── Input Component ────────────────────────────────────────
 
-    function Input({
-        label,
-        value,
-        onChange,
-        placeholder,
-        type = "text",
-    }: {
-        label: string;
-        value: string;
-        onChange: (v: string) => void;
-        placeholder?: string;
-        type?: string;
-    }) {
-        return (
-            <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">
-                    {label}
-                </label>
-                <input
-                    type={type}
-                    value={value}
-                    onChange={(e) => onChange(e.target.value)}
-                    placeholder={placeholder}
-                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white"
-                />
-            </div>
-        );
-    }
-
-    // ── Tab Config ─────────────────────────────────────────────
-
-    const tabs = [
-        { id: "personal" as const, label: "Personal" },
-        { id: "summary" as const, label: "Summary" },
-        { id: "experience" as const, label: "Experience" },
-        { id: "education" as const, label: "Education" },
-        { id: "skills" as const, label: "Skills" },
-        { id: "projects" as const, label: "Projects" },
-        { id: "certs" as const, label: "Certs" },
-    ];
-
-    // ── Section Editor ─────────────────────────────────────────
-
-    function SectionEditor({
-        type,
-        items,
-        isEducation,
-    }: {
-        type: "experience" | "education" | "projects";
-        items: ResumeSection[];
-        isEducation?: boolean;
-    }) {
-        return (
-            <div className="space-y-4">
-                {items.map((item, idx) => (
-                    <div
-                        key={item.id}
-                        className="p-4 border border-slate-200 rounded-lg bg-slate-50/50 space-y-3"
-                    >
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-slate-400 flex items-center gap-1">
-                                <GripVertical className="h-3 w-3" /> #{idx + 1}
-                            </span>
-                            {items.length > 1 && (
-                                <button
-                                    onClick={() => removeSection(type, item.id)}
-                                    className="text-red-400 hover:text-red-600 p-1"
-                                >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                </button>
-                            )}
-                        </div>
-
-                        <div className="grid gap-3 sm:grid-cols-2">
-                            {isEducation ? (
-                                <>
-                                    <Input
-                                        label="Degree"
-                                        value={item.degree || ""}
-                                        onChange={(v) => updateSection(type, item.id, "degree", v)}
-                                        placeholder="B.Tech Computer Science"
-                                    />
-                                    <Input
-                                        label="Institution"
-                                        value={item.institution || ""}
-                                        onChange={(v) =>
-                                            updateSection(type, item.id, "institution", v)
-                                        }
-                                        placeholder="MIT"
-                                    />
-                                    <Input
-                                        label="GPA"
-                                        value={item.gpa || ""}
-                                        onChange={(v) => updateSection(type, item.id, "gpa", v)}
-                                        placeholder="3.8/4.0"
-                                    />
-                                </>
-                            ) : (
-                                <>
-                                    <Input
-                                        label={type === "projects" ? "Project Name" : "Job Title"}
-                                        value={item.title}
-                                        onChange={(v) => updateSection(type, item.id, "title", v)}
-                                        placeholder={
-                                            type === "projects"
-                                                ? "E-Commerce Platform"
-                                                : "Software Engineer"
-                                        }
-                                    />
-                                    {type === "experience" && (
-                                        <Input
-                                            label="Company"
-                                            value={item.company || ""}
-                                            onChange={(v) =>
-                                                updateSection(type, item.id, "company", v)
-                                            }
-                                            placeholder="Google"
-                                        />
-                                    )}
-                                </>
-                            )}
-
-                            <Input
-                                label="Location"
-                                value={item.location || ""}
-                                onChange={(v) => updateSection(type, item.id, "location", v)}
-                                placeholder="San Francisco, CA"
-                            />
-                            <Input
-                                label="Start Date"
-                                value={item.startDate || ""}
-                                onChange={(v) =>
-                                    updateSection(type, item.id, "startDate", v)
-                                }
-                                placeholder="Jan 2023"
-                            />
-                            <Input
-                                label="End Date"
-                                value={item.endDate || ""}
-                                onChange={(v) =>
-                                    updateSection(type, item.id, "endDate", v)
-                                }
-                                placeholder="Present"
-                            />
-                        </div>
-
-                        {/* Bullet Points */}
-                        <div>
-                            <label className="block text-xs font-medium text-slate-500 mb-1">
-                                Bullet Points
-                            </label>
-                            {item.bullets.map((b, bi) => (
-                                <div key={bi} className="flex gap-1 mb-1.5">
-                                    <span className="text-slate-300 mt-2 text-xs">•</span>
-                                    <input
-                                        value={b}
-                                        onChange={(e) =>
-                                            updateBullet(type, item.id, bi, e.target.value)
-                                        }
-                                        placeholder="Describe your achievement with metrics..."
-                                        className="flex-1 px-3 py-1.5 text-sm border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-                                    />
-                                    {item.bullets.length > 1 && (
-                                        <button
-                                            onClick={() => removeBullet(type, item.id, bi)}
-                                            className="text-red-300 hover:text-red-500 px-1"
-                                        >
-                                            <Trash2 className="h-3 w-3" />
-                                        </button>
-                                    )}
-                                </div>
-                            ))}
-                            <button
-                                onClick={() => addBullet(type, item.id)}
-                                className="text-xs text-indigo-500 hover:text-indigo-700 mt-1 flex items-center gap-1"
-                            >
-                                <Plus className="h-3 w-3" /> Add bullet
-                            </button>
-                        </div>
-                    </div>
-                ))}
-
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => addSection(type)}
-                    className="w-full border-dashed"
-                >
-                    <Plus className="h-3.5 w-3.5 mr-1" /> Add{" "}
-                    {type === "experience"
-                        ? "Experience"
-                        : type === "education"
-                            ? "Education"
-                            : "Project"}
-                </Button>
-            </div>
-        );
-    }
 
     // ── Main Render ────────────────────────────────────────────
 
@@ -542,8 +558,8 @@ export default function BuilderPage() {
                                     key={tab.id}
                                     onClick={() => setActiveTab(tab.id)}
                                     className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${activeTab === tab.id
-                                            ? "bg-violet-100 text-violet-700"
-                                            : "text-slate-500 hover:bg-slate-100"
+                                        ? "bg-violet-100 text-violet-700"
+                                        : "text-slate-500 hover:bg-slate-100"
                                         }`}
                                 >
                                     {tab.label}
@@ -632,6 +648,12 @@ export default function BuilderPage() {
                                     <SectionEditor
                                         type="experience"
                                         items={resume.experience}
+                                        onUpdate={updateSection}
+                                        onRemove={removeSection}
+                                        onAddBullet={addBullet}
+                                        onUpdateBullet={updateBullet}
+                                        onRemoveBullet={removeBullet}
+                                        onAddSection={addSection}
                                     />
                                 )}
 
@@ -641,6 +663,12 @@ export default function BuilderPage() {
                                         type="education"
                                         items={resume.education}
                                         isEducation
+                                        onUpdate={updateSection}
+                                        onRemove={removeSection}
+                                        onAddBullet={addBullet}
+                                        onUpdateBullet={updateBullet}
+                                        onRemoveBullet={removeBullet}
+                                        onAddSection={addSection}
                                     />
                                 )}
 
@@ -683,6 +711,12 @@ export default function BuilderPage() {
                                     <SectionEditor
                                         type="projects"
                                         items={resume.projects}
+                                        onUpdate={updateSection}
+                                        onRemove={removeSection}
+                                        onAddBullet={addBullet}
+                                        onUpdateBullet={updateBullet}
+                                        onRemoveBullet={removeBullet}
+                                        onAddSection={addSection}
                                     />
                                 )}
 
@@ -804,12 +838,12 @@ export default function BuilderPage() {
                                             >
                                                 Summary
                                             </h2>
-                                            <p style={{ color: "#475569" }}>{resume.summary}</p>
+                                            <p>{resume.summary}</p>
                                         </>
                                     )}
 
                                     {/* Experience */}
-                                    {resume.experience.some((e) => e.title || e.company) && (
+                                    {resume.experience.length > 0 && resume.experience[0].title && (
                                         <>
                                             <h2
                                                 style={{
@@ -825,64 +859,48 @@ export default function BuilderPage() {
                                             >
                                                 Experience
                                             </h2>
-                                            {resume.experience
-                                                .filter((e) => e.title || e.company)
-                                                .map((exp) => (
-                                                    <div key={exp.id} style={{ marginBottom: "12px" }}>
-                                                        <div
-                                                            style={{
-                                                                display: "flex",
-                                                                justifyContent: "space-between",
-                                                                alignItems: "baseline",
-                                                            }}
-                                                        >
-                                                            <h3 style={{ fontSize: "13px", fontWeight: 600 }}>
-                                                                {exp.title}
-                                                                {exp.company && (
-                                                                    <span style={{ color: "#64748b", fontWeight: 400 }}>
-                                                                        {" "}
-                                                                        — {exp.company}
-                                                                    </span>
-                                                                )}
-                                                            </h3>
-                                                            {(exp.startDate || exp.endDate) && (
-                                                                <span
-                                                                    style={{
-                                                                        fontSize: "11px",
-                                                                        color: "#64748b",
-                                                                        whiteSpace: "nowrap",
-                                                                    }}
-                                                                >
-                                                                    {exp.startDate}
-                                                                    {exp.endDate && ` – ${exp.endDate}`}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                        {exp.location && (
-                                                            <div style={{ fontSize: "11px", color: "#94a3b8" }}>
-                                                                {exp.location}
-                                                            </div>
-                                                        )}
-                                                        {exp.bullets.some((b) => b.trim()) && (
-                                                            <ul style={{ paddingLeft: "16px", margin: "4px 0" }}>
-                                                                {exp.bullets
-                                                                    .filter((b) => b.trim())
-                                                                    .map((b, i) => (
-                                                                        <li key={i} style={{ color: "#475569" }}>
-                                                                            {b}
-                                                                        </li>
-                                                                    ))}
-                                                            </ul>
-                                                        )}
+                                            {resume.experience.map((exp) => (
+                                                <div key={exp.id} style={{ marginBottom: "12px" }}>
+                                                    <div
+                                                        style={{
+                                                            display: "flex",
+                                                            justifyContent: "space-between",
+                                                            alignItems: "baseline",
+                                                            marginBottom: "2px",
+                                                        }}
+                                                    >
+                                                        <h3 style={{ fontSize: "13px", fontWeight: 600 }}>
+                                                            {exp.title}
+                                                        </h3>
+                                                        <span style={{ fontSize: "11px", color: "#64748b" }}>
+                                                            {exp.startDate} – {exp.endDate}
+                                                        </span>
                                                     </div>
-                                                ))}
+                                                    <div
+                                                        style={{
+                                                            display: "flex",
+                                                            justifyContent: "space-between",
+                                                            fontSize: "11px",
+                                                            color: "#64748b",
+                                                            marginBottom: "4px",
+                                                        }}
+                                                    >
+                                                        <span>{exp.company}</span>
+                                                        <span>{exp.location}</span>
+                                                    </div>
+                                                    <ul>
+                                                        {exp.bullets.map((b, i) =>
+                                                            b ? <li key={i}>{b}</li> : null
+                                                        )}
+                                                    </ul>
+                                                </div>
+                                            ))}
                                         </>
                                     )}
 
                                     {/* Education */}
-                                    {resume.education.some(
-                                        (e) => e.degree || e.institution
-                                    ) && (
+                                    {resume.education.length > 0 &&
+                                        resume.education[0].institution && (
                                             <>
                                                 <h2
                                                     style={{
@@ -898,40 +916,33 @@ export default function BuilderPage() {
                                                 >
                                                     Education
                                                 </h2>
-                                                {resume.education
-                                                    .filter((e) => e.degree || e.institution)
-                                                    .map((edu) => (
-                                                        <div key={edu.id} style={{ marginBottom: "8px" }}>
-                                                            <div
-                                                                style={{
-                                                                    display: "flex",
-                                                                    justifyContent: "space-between",
-                                                                    alignItems: "baseline",
-                                                                }}
-                                                            >
-                                                                <h3 style={{ fontSize: "13px", fontWeight: 600 }}>
-                                                                    {edu.degree}
-                                                                    {edu.institution && (
-                                                                        <span style={{ color: "#64748b", fontWeight: 400 }}>
-                                                                            {" "}
-                                                                            — {edu.institution}
-                                                                        </span>
-                                                                    )}
-                                                                </h3>
-                                                                {(edu.startDate || edu.endDate) && (
-                                                                    <span style={{ fontSize: "11px", color: "#64748b" }}>
-                                                                        {edu.startDate}
-                                                                        {edu.endDate && ` – ${edu.endDate}`}
-                                                                    </span>
-                                                                )}
-                                                            </div>
+                                                {resume.education.map((edu) => (
+                                                    <div key={edu.id} style={{ marginBottom: "8px" }}>
+                                                        <div
+                                                            style={{
+                                                                display: "flex",
+                                                                justifyContent: "space-between",
+                                                                alignItems: "baseline",
+                                                            }}
+                                                        >
+                                                            <h3 style={{ fontSize: "13px", fontWeight: 600 }}>
+                                                                {edu.institution}
+                                                            </h3>
+                                                            <span style={{ fontSize: "11px", color: "#64748b" }}>
+                                                                {edu.startDate} – {edu.endDate}
+                                                            </span>
+                                                        </div>
+                                                        <div style={{ fontSize: "12px" }}>
+                                                            {edu.degree}
                                                             {edu.gpa && (
-                                                                <div style={{ fontSize: "11px", color: "#94a3b8" }}>
-                                                                    GPA: {edu.gpa}
-                                                                </div>
+                                                                <span style={{ color: "#64748b" }}>
+                                                                    {" "}
+                                                                    • GPA: {edu.gpa}
+                                                                </span>
                                                             )}
                                                         </div>
-                                                    ))}
+                                                    </div>
+                                                ))}
                                             </>
                                         )}
 
@@ -952,24 +963,9 @@ export default function BuilderPage() {
                                             >
                                                 Skills
                                             </h2>
-                                            <div
-                                                style={{
-                                                    display: "flex",
-                                                    flexWrap: "wrap",
-                                                    gap: "6px",
-                                                }}
-                                            >
+                                            <div className="skills">
                                                 {resume.skills.map((skill) => (
-                                                    <span
-                                                        key={skill}
-                                                        style={{
-                                                            fontSize: "11px",
-                                                            background: "#f1f5f9",
-                                                            padding: "2px 8px",
-                                                            borderRadius: "4px",
-                                                            color: "#475569",
-                                                        }}
-                                                    >
+                                                    <span key={skill} className="skill">
                                                         {skill}
                                                     </span>
                                                 ))}
@@ -978,7 +974,7 @@ export default function BuilderPage() {
                                     )}
 
                                     {/* Projects */}
-                                    {resume.projects.some((pr) => pr.title) && (
+                                    {resume.projects.length > 0 && resume.projects[0].title && (
                                         <>
                                             <h2
                                                 style={{
@@ -994,26 +990,30 @@ export default function BuilderPage() {
                                             >
                                                 Projects
                                             </h2>
-                                            {resume.projects
-                                                .filter((pr) => pr.title)
-                                                .map((proj) => (
-                                                    <div key={proj.id} style={{ marginBottom: "10px" }}>
+                                            {resume.projects.map((proj) => (
+                                                <div key={proj.id} style={{ marginBottom: "12px" }}>
+                                                    <div
+                                                        style={{
+                                                            display: "flex",
+                                                            justifyContent: "space-between",
+                                                            alignItems: "baseline",
+                                                            marginBottom: "2px",
+                                                        }}
+                                                    >
                                                         <h3 style={{ fontSize: "13px", fontWeight: 600 }}>
                                                             {proj.title}
                                                         </h3>
-                                                        {proj.bullets.some((b) => b.trim()) && (
-                                                            <ul style={{ paddingLeft: "16px", margin: "4px 0" }}>
-                                                                {proj.bullets
-                                                                    .filter((b) => b.trim())
-                                                                    .map((b, i) => (
-                                                                        <li key={i} style={{ color: "#475569" }}>
-                                                                            {b}
-                                                                        </li>
-                                                                    ))}
-                                                            </ul>
-                                                        )}
+                                                        <span style={{ fontSize: "11px", color: "#64748b" }}>
+                                                            {proj.startDate} – {proj.endDate}
+                                                        </span>
                                                     </div>
-                                                ))}
+                                                    <ul>
+                                                        {proj.bullets.map((b, i) =>
+                                                            b ? <li key={i}>{b}</li> : null
+                                                        )}
+                                                    </ul>
+                                                </div>
+                                            ))}
                                         </>
                                     )}
 
@@ -1034,29 +1034,12 @@ export default function BuilderPage() {
                                             >
                                                 Certifications
                                             </h2>
-                                            <ul style={{ paddingLeft: "16px" }}>
+                                            <ul>
                                                 {resume.certifications.map((cert, i) => (
-                                                    <li key={i} style={{ color: "#475569" }}>
-                                                        {cert}
-                                                    </li>
+                                                    <li key={i}>{cert}</li>
                                                 ))}
                                             </ul>
                                         </>
-                                    )}
-
-                                    {/* Empty State */}
-                                    {!p.fullName && !resume.summary && (
-                                        <div
-                                            style={{
-                                                textAlign: "center",
-                                                padding: "80px 0",
-                                                color: "#94a3b8",
-                                            }}
-                                        >
-                                            <p style={{ fontSize: "14px" }}>
-                                                Start filling in the form to see your resume here
-                                            </p>
-                                        </div>
                                     )}
                                 </div>
                             </CardContent>

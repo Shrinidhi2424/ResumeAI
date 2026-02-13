@@ -1,5 +1,4 @@
-import { streamText } from "ai";
-import { google } from "@ai-sdk/google";
+import { genAI } from "@/lib/ai/gemini";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { resumes, coverLetters } from "@/lib/db/schema";
@@ -11,7 +10,8 @@ import { coverLetterSchema, validateInput } from "@/lib/security/validators";
 /**
  * POST /api/cover-letter/generate
  *
- * Streams a cover letter response using the Vercel AI SDK.
+ * Streams a cover letter response using the Vercel AI SDK Adapter for Google Generative AI.
+ * Uses the shared `genAI` client from @/lib/ai/gemini to ensure correct model and key usage.
  *
  * Body:
  *   - resumeId: UUID of the resume to use
@@ -38,7 +38,7 @@ export async function POST(req: Request) {
         if (!validation.success) {
             return new Response(validation.error, { status: 400 });
         }
-        const { resumeId, jobDescription, companyName, tone } = validation.data;
+        const { resumeId, jobDescription, companyName, tone, companyNews } = validation.data;
 
         // ── Fetch Resume Text ───────────────────────────────────
         const [resume] = await db
@@ -59,35 +59,63 @@ export async function POST(req: Request) {
             return new Response("Resume has no parsed text.", { status: 422 });
         }
 
-        // ── Build Prompt & Stream ───────────────────────────────
+        // ── Build Prompt ────────────────────────────────────────
         const prompt = buildCoverLetterPrompt(
             resume.parsedText,
             jobDescription,
             companyName,
-            "No recent news available.",
+            companyNews || "No recent news available.",
             tone
         );
 
-        const result = streamText({
-            model: google("gemini-1.5-pro"),
-            prompt,
-            async onFinish({ text }) {
-                // Save the completed cover letter to the database
+        // ── Stream Response ─────────────────────────────────────
+        // Use the direct client which allows "gemini-2.5-flash" if the account has access.
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+        const streamingResults = await model.generateContentStream(prompt);
+
+        // Convert Gemini stream to web standard ReadableStream
+        const stream = new ReadableStream({
+            async start(controller) {
+                let fullText = "";
+                const encoder = new TextEncoder();
+
                 try {
+                    console.log("Stream started for user:", userId);
+                    for await (const chunk of streamingResults.stream) {
+                        const chunkText = chunk.text();
+                        fullText += chunkText;
+                        controller.enqueue(encoder.encode(chunkText));
+                    }
+                    console.log("Stream complete. Total length:", fullText.length);
+
+                    // Save the completed cover letter to the database
                     await db.insert(coverLetters).values({
                         userId,
                         tone,
-                        content: text,
+                        content: fullText,
                     });
+
+                    controller.close();
                 } catch (err) {
-                    console.error("Failed to save cover letter:", err);
+                    console.error("Stream error:", err);
+                    controller.error(err);
                 }
             },
         });
 
-        return result.toTextStreamResponse();
+        return new Response(stream, {
+            headers: {
+                "Content-Type": "text/plain; charset=utf-8",
+                "X-Content-Type-Options": "nosniff",
+            },
+        });
     } catch (error) {
         console.error("Cover letter generation error:", error);
-        return new Response("Internal server error.", { status: 500 });
+        // Return a JSON error response that the client can parse
+        return new Response(JSON.stringify({ error: "Internal server error." }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+        });
     }
 }

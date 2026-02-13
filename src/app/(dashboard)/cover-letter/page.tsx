@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { useCompletion } from "@ai-sdk/react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,10 @@ import {
     Copy,
     Check,
     Download,
+    ArrowLeft,
 } from "lucide-react";
+
+import { jsPDF } from "jspdf";
 
 type Tone = "professional" | "enthusiastic" | "technical";
 
@@ -35,6 +39,7 @@ export default function CoverLetterPage() {
     // Vercel AI SDK streaming hook
     const { completion, complete, isLoading } = useCompletion({
         api: "/api/cover-letter/generate",
+        streamProtocol: "text", // Explicitly use text stream
         onError: (err: Error) => {
             setError(err.message || "Failed to generate cover letter.");
         },
@@ -93,13 +98,46 @@ export default function CoverLetterPage() {
 
     const handleDownload = () => {
         if (!completion) return;
-        const blob = new Blob([completion], { type: "text/plain" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `cover-letter-${companyName.replace(/\s+/g, "-").toLowerCase()}.txt`;
-        a.click();
-        URL.revokeObjectURL(url);
+
+        const doc = new jsPDF();
+
+        // Configuration
+        const margin = 20;
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const maxLineWidth = pageWidth - (margin * 2);
+        const lineHeight = 7;
+        let cursorY = margin + 10; // Start a bit lower
+
+        // Set font to Times New Roman for professional look
+        doc.setFont("times", "normal");
+        doc.setFontSize(12);
+
+        // Add Date
+        const date = new Date().toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+        doc.text(date, margin, cursorY);
+        cursorY += lineHeight * 2;
+
+        // Split text into lines that fit the width
+        const lines = doc.splitTextToSize(completion, maxLineWidth);
+
+        // Iterate through lines to handle page breaks
+        lines.forEach((line: string) => {
+            if (cursorY + lineHeight > pageHeight - margin) {
+                doc.addPage();
+                cursorY = margin;
+            }
+            doc.text(line, margin, cursorY);
+            cursorY += lineHeight;
+        });
+
+        // Save PDF
+        const filename = `cover-letter-${companyName.replace(/\s+/g, "-").toLowerCase() || "generated"}.pdf`;
+        doc.save(filename);
     };
 
     const tones: { value: Tone; label: string; emoji: string; desc: string }[] = [

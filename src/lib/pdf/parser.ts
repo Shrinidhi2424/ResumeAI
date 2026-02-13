@@ -1,5 +1,5 @@
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const pdfParse = require("pdf-parse");
+const PDFParser = require("pdf2json");
 
 /**
  * Result from parsing a PDF file.
@@ -18,32 +18,43 @@ export interface ParsedPDFResult {
 }
 
 /**
- * Parse a PDF buffer and extract clean text content.
- *
- * Cleaning steps:
- * 1. Collapse multiple consecutive newlines into a single newline
- * 2. Remove non-printable / control characters (except newlines and tabs)
- * 3. Trim leading/trailing whitespace from each line
- * 4. Remove completely empty lines that add no value
- * 5. Normalize Unicode whitespace (non-breaking spaces, etc.)
+ * Parse a PDF buffer and extract clean text content using pdf2json.
  *
  * @param buffer - Raw PDF file as a Buffer
  * @returns Parsed and cleaned text with metadata
  */
 export async function parsePDF(buffer: Buffer): Promise<ParsedPDFResult> {
-    const data = await pdfParse(buffer);
+    return new Promise((resolve, reject) => {
+        const parser = new PDFParser(null, 1); // 1 = text only
 
-    const cleanedText = cleanPDFText(data.text);
+        parser.on("pdfParser_dataError", (errData: { parserError: Error }) => {
+            reject(errData.parserError);
+        });
 
-    return {
-        text: cleanedText,
-        pageCount: data.numpages,
-        metadata: {
-            title: data.info?.Title || undefined,
-            author: data.info?.Author || undefined,
-            subject: data.info?.Subject || undefined,
-        },
-    };
+        parser.on("pdfParser_dataReady", (pdfData: any) => {
+            // Extract text from pages
+            const rawText = parser.getRawTextContent().replace(/\r\n/g, "\n");
+
+            // Metadata is sometimes in pdfData.Meta
+            const meta = pdfData.Meta || {};
+
+            const cleanedText = cleanPDFText(rawText);
+
+            resolve({
+                text: cleanedText,
+                pageCount: pdfData.Pages.length,
+                metadata: {
+                    title: meta.Title && typeof meta.Title === 'string' ? decodeURIComponent(meta.Title) : undefined,
+                    author: meta.Author && typeof meta.Author === 'string' ? decodeURIComponent(meta.Author) : undefined,
+                    subject: meta.Subject && typeof meta.Subject === 'string' ? decodeURIComponent(meta.Subject) : undefined,
+                },
+            });
+        });
+
+        // pdf2json expects a buffer, but its main API takes a file path.
+        // It has a parseBuffer method.
+        parser.parseBuffer(buffer);
+    });
 }
 
 /**

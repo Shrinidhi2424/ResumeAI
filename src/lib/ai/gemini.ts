@@ -18,11 +18,12 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 /**
  * Get a Gemini model instance.
  *
- * @param modelName - Defaults to "gemini-1.5-pro" for best quality.
- *                    Use "gemini-1.5-flash" for faster, cheaper requests.
+ * @param modelName - Defaults to "gemini-2.5-flash" as requested.
+ *                    Can be overridden by GEMINI_MODEL env var.
  */
-export function getModel(modelName: string = "gemini-1.5-pro") {
-    return genAI.getGenerativeModel({ model: modelName });
+export function getModel(modelName?: string) {
+    const model = modelName || process.env.GEMINI_MODEL || "gemini-2.5-flash";
+    return genAI.getGenerativeModel({ model });
 }
 
 /**

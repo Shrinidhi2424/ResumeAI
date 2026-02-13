@@ -106,9 +106,10 @@ export async function POST(req: NextRequest) {
         try {
             rawResponse = await generateContent(prompt);
         } catch (aiError) {
-            console.error("Gemini API error:", aiError);
+            console.error("Gemini API error (Stack):", aiError);
+            const errorMessage = aiError instanceof Error ? aiError.message : "Unknown AI error";
             return NextResponse.json(
-                { error: "AI service is temporarily unavailable. Please try again." },
+                { error: `AI service unavailable: ${errorMessage}` },
                 { status: 503 }
             );
         }
