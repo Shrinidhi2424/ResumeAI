@@ -1,0 +1,181 @@
+/**
+ * Hand-curated dictionary of common tech skills and tools.
+ *
+ * `name` is the canonical form we report. `aliases` are other spellings
+ * that mean the same skill. Everything is lowercase.
+ *
+ * Deliberate omissions (too ambiguous as plain English words):
+ *   - "go" (use "golang"), "c" and "r" (single letters),
+ *   - bare "spring", "express", "next", "rest" (use the specific forms below).
+ */
+export interface Skill {
+    name: string;
+    aliases: string[];
+}
+
+export const SKILLS: Skill[] = [
+    // ── Languages ─────────────────────────────────────────────
+    { name: "javascript", aliases: ["js", "ecmascript", "es6"] },
+    { name: "typescript", aliases: ["ts"] },
+    { name: "python", aliases: [] },
+    { name: "java", aliases: [] },
+    { name: "c++", aliases: ["cpp"] },
+    { name: "c#", aliases: ["csharp", "c sharp"] },
+    { name: "golang", aliases: [] },
+    { name: "rust", aliases: [] },
+    { name: "ruby", aliases: [] },
+    { name: "php", aliases: [] },
+    { name: "kotlin", aliases: [] },
+    { name: "swift", aliases: [] },
+    { name: "objective-c", aliases: ["objective c"] },
+    { name: "scala", aliases: [] },
+    { name: "dart", aliases: [] },
+    { name: "elixir", aliases: [] },
+    { name: "perl", aliases: [] },
+    { name: "matlab", aliases: [] },
+    { name: "sql", aliases: [] },
+    { name: "bash", aliases: ["shell scripting"] },
+    { name: "powershell", aliases: [] },
+    { name: "html", aliases: ["html5"] },
+    { name: "css", aliases: ["css3"] },
+    { name: "sass", aliases: ["scss"] },
+
+    // ── Frontend ──────────────────────────────────────────────
+    { name: "react", aliases: ["react.js", "reactjs"] },
+    { name: "react native", aliases: [] },
+    { name: "next.js", aliases: ["nextjs"] },
+    { name: "vue", aliases: ["vue.js", "vuejs"] },
+    { name: "angular", aliases: ["angularjs", "angular.js"] },
+    { name: "svelte", aliases: [] },
+    { name: "redux", aliases: [] },
+    { name: "jquery", aliases: [] },
+    { name: "tailwind css", aliases: ["tailwind", "tailwindcss"] },
+    { name: "bootstrap", aliases: [] },
+    { name: "webpack", aliases: [] },
+    { name: "vite", aliases: [] },
+    { name: "storybook", aliases: [] },
+    { name: "figma", aliases: [] },
+
+    // ── Backend & frameworks ──────────────────────────────────
+    { name: "node.js", aliases: ["node", "nodejs"] },
+    { name: "express.js", aliases: ["expressjs"] },
+    { name: "nestjs", aliases: ["nest.js"] },
+    { name: "django", aliases: [] },
+    { name: "flask", aliases: [] },
+    { name: "fastapi", aliases: [] },
+    { name: "spring boot", aliases: ["springboot", "spring framework"] },
+    { name: "hibernate", aliases: [] },
+    { name: "ruby on rails", aliases: ["rails"] },
+    { name: "laravel", aliases: [] },
+    { name: ".net", aliases: ["dotnet", "asp.net"] },
+    { name: "graphql", aliases: [] },
+    { name: "rest api", aliases: ["rest apis", "restful", "restful api", "restful apis"] },
+    { name: "grpc", aliases: [] },
+    { name: "websockets", aliases: ["websocket"] },
+    { name: "microservices", aliases: ["microservice"] },
+    { name: "serverless", aliases: [] },
+    { name: "oauth", aliases: ["oauth2", "oauth 2.0"] },
+    { name: "jwt", aliases: [] },
+    { name: "prisma", aliases: [] },
+    { name: "sequelize", aliases: [] },
+    { name: "drizzle orm", aliases: [] },
+
+    // ── Databases & data stores ───────────────────────────────
+    { name: "postgresql", aliases: ["postgres"] },
+    { name: "mysql", aliases: [] },
+    { name: "sqlite", aliases: [] },
+    { name: "sql server", aliases: ["mssql", "microsoft sql server"] },
+    { name: "oracle database", aliases: ["oracle db"] },
+    { name: "mongodb", aliases: ["mongo"] },
+    { name: "redis", aliases: [] },
+    { name: "elasticsearch", aliases: ["elastic search"] },
+    { name: "cassandra", aliases: [] },
+    { name: "dynamodb", aliases: [] },
+    { name: "firebase", aliases: [] },
+    { name: "supabase", aliases: [] },
+    { name: "nosql", aliases: [] },
+    { name: "snowflake", aliases: [] },
+    { name: "bigquery", aliases: [] },
+
+    // ── Data engineering ──────────────────────────────────────
+    { name: "kafka", aliases: ["apache kafka"] },
+    { name: "rabbitmq", aliases: [] },
+    { name: "spark", aliases: ["apache spark", "pyspark"] },
+    { name: "hadoop", aliases: [] },
+    { name: "airflow", aliases: ["apache airflow"] },
+    { name: "databricks", aliases: [] },
+    { name: "etl", aliases: [] },
+    { name: "tableau", aliases: [] },
+    { name: "power bi", aliases: ["powerbi"] },
+    { name: "excel", aliases: [] },
+
+    // ── Cloud & DevOps ────────────────────────────────────────
+    { name: "aws", aliases: ["amazon web services"] },
+    { name: "aws lambda", aliases: [] },
+    { name: "azure", aliases: ["microsoft azure"] },
+    { name: "gcp", aliases: ["google cloud", "google cloud platform"] },
+    { name: "docker", aliases: [] },
+    { name: "kubernetes", aliases: ["k8s"] },
+    { name: "helm", aliases: [] },
+    { name: "terraform", aliases: [] },
+    { name: "ansible", aliases: [] },
+    { name: "jenkins", aliases: [] },
+    { name: "github actions", aliases: [] },
+    { name: "gitlab", aliases: ["gitlab ci"] },
+    { name: "circleci", aliases: [] },
+    { name: "ci/cd", aliases: ["cicd", "continuous integration"] },
+    { name: "linux", aliases: [] },
+    { name: "nginx", aliases: [] },
+    { name: "vercel", aliases: [] },
+    { name: "heroku", aliases: [] },
+    { name: "prometheus", aliases: [] },
+    { name: "grafana", aliases: [] },
+    { name: "datadog", aliases: [] },
+
+    // ── Tools & practices ─────────────────────────────────────
+    { name: "git", aliases: [] },
+    { name: "github", aliases: [] },
+    { name: "jira", aliases: [] },
+    { name: "postman", aliases: [] },
+    { name: "swagger", aliases: ["openapi"] },
+    { name: "maven", aliases: [] },
+    { name: "gradle", aliases: [] },
+    { name: "npm", aliases: [] },
+    { name: "agile", aliases: [] },
+    { name: "scrum", aliases: [] },
+    { name: "tdd", aliases: ["test-driven development", "test driven development"] },
+    { name: "oop", aliases: ["object-oriented programming", "object oriented programming"] },
+    { name: "data structures", aliases: [] },
+
+    // ── Testing ───────────────────────────────────────────────
+    { name: "jest", aliases: [] },
+    { name: "vitest", aliases: [] },
+    { name: "mocha", aliases: [] },
+    { name: "cypress", aliases: [] },
+    { name: "playwright", aliases: [] },
+    { name: "selenium", aliases: [] },
+    { name: "pytest", aliases: [] },
+    { name: "junit", aliases: [] },
+
+    // ── Mobile ────────────────────────────────────────────────
+    { name: "android", aliases: [] },
+    { name: "ios", aliases: [] },
+    { name: "flutter", aliases: [] },
+
+    // ── ML / AI ───────────────────────────────────────────────
+    { name: "machine learning", aliases: ["ml"] },
+    { name: "deep learning", aliases: [] },
+    { name: "nlp", aliases: ["natural language processing"] },
+    { name: "computer vision", aliases: [] },
+    { name: "llm", aliases: ["llms", "large language models", "large language model"] },
+    { name: "tensorflow", aliases: [] },
+    { name: "pytorch", aliases: [] },
+    { name: "keras", aliases: [] },
+    { name: "scikit-learn", aliases: ["sklearn", "scikit learn"] },
+    { name: "pandas", aliases: [] },
+    { name: "numpy", aliases: [] },
+    { name: "opencv", aliases: [] },
+    { name: "langchain", aliases: [] },
+    { name: "hugging face", aliases: ["huggingface"] },
+    { name: "jupyter", aliases: [] },
+];

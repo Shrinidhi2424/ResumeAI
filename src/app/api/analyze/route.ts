@@ -8,6 +8,21 @@ import { buildAnalyzePrompt } from "@/lib/ai/prompts";
 import { parseAnalysisResponse } from "@/lib/ai/response-parser";
 import { checkRateLimit, getRateLimitKey, RATE_LIMITS } from "@/lib/security/rate-limiter";
 import { analyzeSchema, validateInput } from "@/lib/security/validators";
+import { downloadResumePdf } from "@/lib/supabase/storage";
+import { parseFirstPageTextItems } from "@/lib/pdf/parser";
+import { generateHeatmap } from "@/lib/pdf/heatmap";
+import { scoreKeywordCoverage, type KeywordCoverage } from "@/lib/scoring/keyword-match";
+import type { AnalysisResult } from "@/types";
+
+/** Shown (and saved) when Gemini could not produce an analysis. */
+const KEYWORD_ONLY_SUMMARY =
+    "AI analysis unavailable: showing deterministic keyword match only.";
+
+/** Like AnalysisResult, but scores can be null in keyword-only mode. */
+type AnalyzeOutput = Omit<AnalysisResult, "compatibilityScore" | "atsScore"> & {
+    compatibilityScore: number | null;
+    atsScore: number | null;
+};
 
 /**
  * POST /api/analyze
@@ -22,10 +37,12 @@ import { analyzeSchema, validateInput } from "@/lib/security/validators";
  *   1. Authenticate user via Clerk
  *   2. Fetch resume's parsed_text from the database
  *   3. Optionally save the job description for reusability
- *   4. Build the analysis prompt and send to Gemini
- *   5. Parse the AI response with strict validation
- *   6. Save structured results to the analyses table
- *   7. Return the full analysis result
+ *   4. Compute deterministic keyword coverage (always)
+ *   5. Ask Gemini and parse its JSON; if that fails, fall back to a
+ *      keyword-only result built from step 4 (mode: "keyword-only")
+ *   6. Build the recruiter-attention heatmap (best effort, page 1 only)
+ *   7. Save structured results to the analyses table
+ *   8. Return the result with `mode` and `keywordCoverage`
  */
 export async function POST(req: NextRequest) {
     const startTime = Date.now();
@@ -60,6 +77,7 @@ export async function POST(req: NextRequest) {
             .select({
                 id: resumes.id,
                 parsedText: resumes.parsedText,
+                fileUrl: resumes.fileUrl,
                 userId: resumes.userId,
             })
             .from(resumes)
@@ -99,37 +117,31 @@ export async function POST(req: NextRequest) {
             })
             .returning({ id: jobDescriptions.id });
 
-        // ── 5. Build Prompt & Call Gemini ───────────────────────
-        const prompt = buildAnalyzePrompt(resume.parsedText, jobDescription);
+        // ── 5. Keyword coverage (deterministic, always computed) ──
+        const keywordCoverage = scoreKeywordCoverage(resume.parsedText, jobDescription);
 
-        let rawResponse: string;
+        // ── 6. Gemini, with keyword-only fallback ──────────────
+        // Any failure here (missing key, API error, unparseable JSON)
+        // falls back instead of returning 502/503.
+        let analysisResult: AnalyzeOutput;
+        let mode: "ai" | "keyword-only";
         try {
-            rawResponse = await generateContent(prompt);
-        } catch (aiError) {
-            console.error("Gemini API error (Stack):", aiError);
-            const errorMessage = aiError instanceof Error ? aiError.message : "Unknown AI error";
-            return NextResponse.json(
-                { error: `AI service unavailable: ${errorMessage}` },
-                { status: 503 }
-            );
-        }
-
-        // ── 6. Parse AI Response ───────────────────────────────
-        let analysisResult;
-        try {
+            const prompt = buildAnalyzePrompt(resume.parsedText, jobDescription);
+            const rawResponse = await generateContent(prompt);
             analysisResult = parseAnalysisResponse(rawResponse);
-        } catch (parseError) {
-            console.error("AI response parsing error:", parseError);
-            return NextResponse.json(
-                {
-                    error:
-                        "Failed to parse AI response. The AI returned an unexpected format. Please try again.",
-                },
-                { status: 502 }
-            );
+            mode = "ai";
+        } catch (aiError) {
+            console.error("Gemini analysis failed, using keyword-only fallback:", aiError);
+            analysisResult = buildKeywordOnlyResult(keywordCoverage);
+            mode = "keyword-only";
         }
 
-        // ── 7. Save to Database ────────────────────────────────
+        // ── 7. Heatmap (best effort) ───────────────────────────
+        const heatmapData = resume.fileUrl
+            ? await buildHeatmapData(resume.fileUrl, analysisResult.matchedKeywords)
+            : null;
+
+        // ── 8. Save to Database ────────────────────────────────
         const processingTimeMs = Date.now() - startTime;
 
         const [savedAnalysis] = await db
@@ -143,6 +155,7 @@ export async function POST(req: NextRequest) {
                 missingKeywords: analysisResult.missingKeywords,
                 executiveSummary: analysisResult.executiveSummary,
                 improvements: analysisResult.improvements,
+                heatmapData,
                 processingTimeMs,
             })
             .returning({
@@ -150,13 +163,15 @@ export async function POST(req: NextRequest) {
                 createdAt: analyses.createdAt,
             });
 
-        // ── 8. Response ────────────────────────────────────────
+        // ── 9. Response ────────────────────────────────────────
         return NextResponse.json(
             {
                 analysisId: savedAnalysis.id,
                 resumeId,
                 jdId: savedJD.id,
+                mode,
                 ...analysisResult,
+                keywordCoverage,
                 processingTimeMs,
                 createdAt: savedAnalysis.createdAt,
             },
@@ -168,5 +183,39 @@ export async function POST(req: NextRequest) {
             { error: "Internal server error during analysis." },
             { status: 500 }
         );
+    }
+}
+
+/**
+ * Result saved and returned when Gemini is unavailable: the coverage
+ * score stands in for the compatibility score, and there is no ATS score.
+ */
+function buildKeywordOnlyResult(coverage: KeywordCoverage): AnalyzeOutput {
+    return {
+        compatibilityScore: coverage.score,
+        atsScore: null,
+        matchedKeywords: coverage.matched,
+        missingKeywords: coverage.missing,
+        executiveSummary: KEYWORD_ONLY_SUMMARY,
+        improvements: [],
+        redFlags: [],
+        standoutPoints: [],
+    };
+}
+
+/**
+ * Download the resume PDF, read page-1 text positions and score them.
+ * Returns null on any failure: a heatmap problem must never fail the analysis.
+ */
+async function buildHeatmapData(fileUrl: string, matchedKeywords: string[]) {
+    try {
+        const pdf = await downloadResumePdf(fileUrl);
+        const { items, pageWidth, pageHeight } = await parseFirstPageTextItems(pdf);
+        const points = generateHeatmap(items, matchedKeywords, pageWidth, pageHeight);
+        // Store only what the schema declares (x, y, intensity).
+        return points.map(({ x, y, intensity }) => ({ x, y, intensity }));
+    } catch (error) {
+        console.error("Heatmap generation failed (analysis continues):", error);
+        return null;
     }
 }

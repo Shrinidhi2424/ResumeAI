@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 
-const API_BASE = "http://localhost:3000";
+// Set VITE_API_BASE in extension/.env to point at a deployed app.
+// Falls back to the local dev server.
+const API_BASE: string = import.meta.env.VITE_API_BASE || "http://localhost:3000";
 
 interface ScrapedJob {
     jobTitle: string;
@@ -10,13 +12,16 @@ interface ScrapedJob {
     scrapedAt: string;
 }
 
+// Matches the camelCase JSON returned by POST /api/analyze.
+// Scores are null when the server fell back to keyword-only mode.
 interface AnalysisResult {
     analysisId: string;
-    compatibility_score: number;
-    ats_score: number;
-    matched_keywords: string[];
-    missing_keywords: string[];
-    executive_summary: string;
+    mode: "ai" | "keyword-only";
+    compatibilityScore: number | null;
+    atsScore: number | null;
+    matchedKeywords: string[];
+    missingKeywords: string[];
+    executiveSummary: string;
 }
 
 type Status = "idle" | "scraping" | "analyzing" | "done" | "error";
@@ -138,7 +143,8 @@ export function Popup() {
         }
     }
 
-    function getScoreColor(score: number): string {
+    function getScoreColor(score: number | null): string {
+        if (score === null) return "#94a3b8";
         if (score >= 70) return "#10b981";
         if (score >= 40) return "#f59e0b";
         return "#ef4444";
@@ -234,7 +240,7 @@ export function Popup() {
                         marginBottom: "12px",
                     }}
                 >
-                    No resumes found. Upload one at localhost:3000/upload first.
+                    No resumes found. Upload one at {API_BASE}/upload first.
                 </div>
             )}
 
@@ -340,14 +346,14 @@ export function Popup() {
                         }}
                     >
                         <ScoreCircle
-                            score={result.compatibility_score}
+                            score={result.compatibilityScore}
                             label="Match"
-                            color={getScoreColor(result.compatibility_score)}
+                            color={getScoreColor(result.compatibilityScore)}
                         />
                         <ScoreCircle
-                            score={result.ats_score}
+                            score={result.atsScore}
                             label="ATS"
-                            color={getScoreColor(result.ats_score)}
+                            color={getScoreColor(result.atsScore)}
                         />
                     </div>
 
@@ -363,7 +369,7 @@ export function Popup() {
                             borderRadius: "6px",
                         }}
                     >
-                        {result.executive_summary}
+                        {result.executiveSummary}
                     </p>
 
                     {/* Keywords */}
@@ -371,7 +377,7 @@ export function Popup() {
                         <p
                             style={{ fontSize: "11px", fontWeight: 600, color: "#16a34a" }}
                         >
-                            ✓ Matched ({result.matched_keywords.length})
+                            ✓ Matched ({result.matchedKeywords.length})
                         </p>
                         <div
                             style={{
@@ -381,7 +387,7 @@ export function Popup() {
                                 marginTop: "4px",
                             }}
                         >
-                            {result.matched_keywords.slice(0, 8).map((kw) => (
+                            {result.matchedKeywords.slice(0, 8).map((kw) => (
                                 <span
                                     key={kw}
                                     style={{
@@ -400,7 +406,7 @@ export function Popup() {
 
                     <div>
                         <p style={{ fontSize: "11px", fontWeight: 600, color: "#dc2626" }}>
-                            ✗ Missing ({result.missing_keywords.length})
+                            ✗ Missing ({result.missingKeywords.length})
                         </p>
                         <div
                             style={{
@@ -410,7 +416,7 @@ export function Popup() {
                                 marginTop: "4px",
                             }}
                         >
-                            {result.missing_keywords.slice(0, 8).map((kw) => (
+                            {result.missingKeywords.slice(0, 8).map((kw) => (
                                 <span
                                     key={kw}
                                     style={{
@@ -502,13 +508,13 @@ function ScoreCircle({
     label,
     color,
 }: {
-    score: number;
+    score: number | null;
     label: string;
     color: string;
 }) {
     const radius = 32;
     const circumference = 2 * Math.PI * radius;
-    const progress = (score / 100) * circumference;
+    const progress = ((score ?? 0) / 100) * circumference;
 
     return (
         <div style={{ textAlign: "center" }}>
@@ -542,7 +548,7 @@ function ScoreCircle({
                     fontWeight="bold"
                     fill={color}
                 >
-                    {score}
+                    {score ?? "n/a"}
                 </text>
                 <text x="38" y="50" textAnchor="middle" fontSize="9" fill="#94a3b8">
                     {label}

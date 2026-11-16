@@ -1,38 +1,57 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-if (!process.env.GEMINI_API_KEY) {
-    throw new Error(
-        "GEMINI_API_KEY is not set. Please add it to your .env.local file."
-    );
+/**
+ * Thrown when an AI feature is used but Gemini is not configured.
+ * Routes can check `instanceof AIUnavailableError` to fall back gracefully.
+ */
+export class AIUnavailableError extends Error {
+    constructor(message = "GEMINI_API_KEY is not set, so AI features are unavailable.") {
+        super(message);
+        this.name = "AIUnavailableError";
+    }
 }
 
 /**
- * Singleton Google Generative AI client.
- * Used across the app for all AI-powered features:
- *   - Resume analysis
- *   - Cover letter generation
- *   - Interview question generation
+ * Singleton Google Generative AI client, created on first use.
+ *
+ * We do NOT check the key at import time: any page that imports this
+ * module would crash at build/render time if the key were missing.
+ * Instead the check happens when an AI call is actually made.
  */
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+let client: GoogleGenerativeAI | null = null;
+
+export function getGenAI(): GoogleGenerativeAI {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+        throw new AIUnavailableError();
+    }
+    if (!client) {
+        client = new GoogleGenerativeAI(apiKey);
+    }
+    return client;
+}
+
+/** The model used everywhere. Override with the GEMINI_MODEL env var. */
+export function getModelName(): string {
+    return process.env.GEMINI_MODEL || "gemini-2.5-flash";
+}
 
 /**
  * Get a Gemini model instance.
  *
- * @param modelName - Defaults to "gemini-2.5-flash" as requested.
- *                    Can be overridden by GEMINI_MODEL env var.
+ * @param modelName - Optional override; defaults to getModelName().
  */
 export function getModel(modelName?: string) {
-    const model = modelName || process.env.GEMINI_MODEL || "gemini-2.5-flash";
-    return genAI.getGenerativeModel({ model });
+    return getGenAI().getGenerativeModel({ model: modelName || getModelName() });
 }
 
 /**
  * Send a prompt to Gemini and get the text response.
- * Handles the common pattern of sending a single prompt and extracting text.
  *
  * @param prompt - The full prompt string
  * @param modelName - Optional model override
  * @returns The raw text response from the model
+ * @throws AIUnavailableError if GEMINI_API_KEY is missing
  */
 export async function generateContent(
     prompt: string,
@@ -40,8 +59,5 @@ export async function generateContent(
 ): Promise<string> {
     const model = getModel(modelName);
     const result = await model.generateContent(prompt);
-    const response = result.response;
-    return response.text();
+    return result.response.text();
 }
-
-export { genAI };

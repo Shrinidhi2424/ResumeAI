@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
         const redFlags = improvements.map((i) => `${i.section}: ${i.reasoning}`);
 
         const analysisContext = `
-Score: ${analysis.compatibilityScore}/100.
+Score: ${analysis.compatibilityScore ?? "n/a"}/100.
 Summary: ${analysis.executiveSummary || "N/A"}.
 Matched Skills: ${((analysis.matchedKeywords as string[]) || []).join(", ")}.
     `.trim();

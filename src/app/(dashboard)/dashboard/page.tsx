@@ -21,7 +21,7 @@ export default async function DashboardPage() {
                         Welcome back, {user.firstName || "Student"}!
                     </h1>
                     <p className="text-lg text-slate-600">
-                        Here's what you can do with ResumeAI today.
+                        Here&apos;s what you can do with ResumeAI today.
                     </p>
                 </div>
 

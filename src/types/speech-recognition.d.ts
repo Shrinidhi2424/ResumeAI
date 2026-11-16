@@ -39,6 +39,8 @@ interface SpeechRecognition extends EventTarget {
     onstart: (() => void) | null;
 }
 
+// `declare var` is how TypeScript declares a browser global constructor.
+// eslint-disable-next-line no-var
 declare var SpeechRecognition: {
     prototype: SpeechRecognition;
     new(): SpeechRecognition;
