@@ -43,6 +43,9 @@ export function HeatmapViewer({ fileUrl, heatmapData }: HeatmapViewerProps) {
 
     const PDF_RENDER_WIDTH = 700;
 
+    // Heatmap points are computed for page 1 only, so only draw them there.
+    const drawOverlay = showHeatmap && currentPage === 1;
+
     // ── PDF Callbacks ──────────────────────────────────────────
 
     const onDocumentLoadSuccess = useCallback(
@@ -71,7 +74,7 @@ export function HeatmapViewer({ fileUrl, heatmapData }: HeatmapViewerProps) {
 
     useEffect(() => {
         const canvas = canvasRef.current;
-        if (!canvas || !showHeatmap || pageSize.width === 0) return;
+        if (!canvas || !drawOverlay || pageSize.width === 0) return;
 
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
@@ -132,17 +135,17 @@ export function HeatmapViewer({ fileUrl, heatmapData }: HeatmapViewerProps) {
             ctx.arc(drawX, drawY, radius, 0, Math.PI * 2);
             ctx.fill();
         });
-    }, [heatmapData, showHeatmap, pageSize]);
+    }, [heatmapData, drawOverlay, pageSize]);
 
-    // Clear canvas when heatmap is toggled off
+    // Clear canvas when heatmap is toggled off or we leave page 1
     useEffect(() => {
-        if (!showHeatmap && canvasRef.current) {
+        if (!drawOverlay && canvasRef.current) {
             const ctx = canvasRef.current.getContext("2d");
             if (ctx) {
                 ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
             }
         }
-    }, [showHeatmap]);
+    }, [drawOverlay]);
 
     return (
         <Card className="border-slate-200 shadow-sm overflow-hidden">

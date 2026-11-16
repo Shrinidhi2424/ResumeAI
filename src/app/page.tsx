@@ -75,7 +75,7 @@ export default function LandingPage() {
                 </h1>
                 <p className="text-lg leading-8 text-slate-600 mb-8 max-w-lg">
                   Beat the ATS, write convincing cover letters, and land your dream job with
-                  the world's most advanced resume toolkit powered by Gemini 2.5 Flash.
+                  the world&apos;s most advanced resume toolkit powered by Gemini 2.5 Flash.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <Button size="lg" asChild className="bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-600/25 h-12 px-8 text-base">
@@ -158,7 +158,7 @@ export default function LandingPage() {
                 Everything you need to get hired.
               </p>
               <p className="mt-6 text-lg leading-8 text-slate-600">
-                We've built a suite of tools to help you optimize every part of your job application process.
+                We&apos;ve built a suite of tools to help you optimize every part of your job application process.
               </p>
             </div>
 
@@ -224,7 +224,7 @@ export default function LandingPage() {
                     </div>
                     <h3 className="text-2xl font-bold text-white mb-2">Powered by Gemini 2.5 Flash</h3>
                     <p className="text-slate-400">
-                      Leveraging Google's most efficient multimodal model for lightning-fast analysis and human-like writing suggestions.
+                      Leveraging Google&apos;s most efficient multimodal model for lightning-fast analysis and human-like writing suggestions.
                     </p>
                   </div>
                   <div className="hidden sm:block">

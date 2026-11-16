@@ -1,5 +1,10 @@
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const PDFParser = require("pdf2json");
+import {
+    extractFirstPageTextItems,
+    type Pdf2JsonData,
+    type PageTextItems,
+} from "./text-items";
 
 /**
  * Result from parsing a PDF file.
@@ -31,7 +36,7 @@ export async function parsePDF(buffer: Buffer): Promise<ParsedPDFResult> {
             reject(errData.parserError);
         });
 
-        parser.on("pdfParser_dataReady", (pdfData: any) => {
+        parser.on("pdfParser_dataReady", (pdfData: { Pages: unknown[]; Meta?: Record<string, unknown> }) => {
             // Extract text from pages
             const rawText = parser.getRawTextContent().replace(/\r\n/g, "\n");
 
@@ -53,6 +58,23 @@ export async function parsePDF(buffer: Buffer): Promise<ParsedPDFResult> {
 
         // pdf2json expects a buffer, but its main API takes a file path.
         // It has a parseBuffer method.
+        parser.parseBuffer(buffer);
+    });
+}
+
+/**
+ * Parse a PDF buffer with pdf2json and return positioned text items for
+ * page 1 (used by the heatmap). See text-items.ts for the conversion.
+ */
+export function parseFirstPageTextItems(buffer: Buffer): Promise<PageTextItems> {
+    return new Promise((resolve, reject) => {
+        const parser = new PDFParser(null, 1);
+        parser.on("pdfParser_dataError", (errData: { parserError: Error }) =>
+            reject(errData.parserError)
+        );
+        parser.on("pdfParser_dataReady", (pdfData: Pdf2JsonData) =>
+            resolve(extractFirstPageTextItems(pdfData))
+        );
         parser.parseBuffer(buffer);
     });
 }

@@ -18,13 +18,13 @@ async function main() {
     console.log("Checking Database Tables...");
 
     try {
-        const tables = await sql`
+        const tables = await sql<{ table_name: string }[]>`
             SELECT table_name 
             FROM information_schema.tables 
             WHERE table_schema = 'public'
         `;
 
-        const tableNames = tables.map((t: { table_name: string }) => t.table_name);
+        const tableNames = tables.map((t) => t.table_name);
         console.log("Existing tables:", tableNames);
 
         const requiredTables = ["resumes", "analyses", "job_descriptions"];

@@ -1,4 +1,4 @@
-import { genAI } from "@/lib/ai/gemini";
+import { getModel, AIUnavailableError } from "@/lib/ai/gemini";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { resumes, coverLetters } from "@/lib/db/schema";
@@ -11,7 +11,7 @@ import { coverLetterSchema, validateInput } from "@/lib/security/validators";
  * POST /api/cover-letter/generate
  *
  * Streams a cover letter response using the Vercel AI SDK Adapter for Google Generative AI.
- * Uses the shared `genAI` client from @/lib/ai/gemini to ensure correct model and key usage.
+ * Uses the shared lazy client from @/lib/ai/gemini (getModel) so the model name and key live in one place.
  *
  * Body:
  *   - resumeId: UUID of the resume to use
@@ -69,8 +69,8 @@ export async function POST(req: Request) {
         );
 
         // ── Stream Response ─────────────────────────────────────
-        // Use the direct client which allows "gemini-2.5-flash" if the account has access.
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+        // getModel() throws AIUnavailableError if GEMINI_API_KEY is missing.
+        const model = getModel();
 
         const streamingResults = await model.generateContentStream(prompt);
 
@@ -112,6 +112,12 @@ export async function POST(req: Request) {
         });
     } catch (error) {
         console.error("Cover letter generation error:", error);
+        if (error instanceof AIUnavailableError) {
+            return new Response(JSON.stringify({ error: error.message }), {
+                status: 503,
+                headers: { "Content-Type": "application/json" },
+            });
+        }
         // Return a JSON error response that the client can parse
         return new Response(JSON.stringify({ error: "Internal server error." }), {
             status: 500,
